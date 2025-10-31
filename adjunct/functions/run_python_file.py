@@ -1,6 +1,31 @@
 import os
 import subprocess
+from google.genai import types
 from pathlib import Path
+
+schema_run_python_file = types.FunctionDeclaration(
+    name="run_python_file", # 💡 Changed name to reflect file execution
+    description="Runs a given Python file with optional arguments and returns its output.",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="The path of the Python file to execute, relative to the working directory.",
+            ),
+            "args": types.Schema(
+                type=types.Type.ARRAY,
+                description="List of arguments (strings) to pass to the Python file when executing.",
+                # 🛠️ FIX: An ARRAY type MUST specify the type of its items
+                items=types.Schema(
+                    type=types.Type.STRING 
+                )
+            ),
+        },
+        # Assuming file_path is required, which is typical for running a file
+        required=["file_path"],
+    ),
+)
 
 def run_python_file(working_directory, file_path, args=[]):
     working_path_abs = Path(working_directory).resolve()
