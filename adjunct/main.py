@@ -8,19 +8,28 @@ load_dotenv()
 api_key = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
 
-user_prompt = sys.argv[1:] if len(sys.argv) > 1 else print("Please provide input text as command line arguments.")
+output = []
 
-messages = [
-    types.Content(role="user",parts=[types.Part(text=user_prompt)]),
-]
+if len(sys.argv) > 1:
+    user_prompt = sys.argv[1:]
+    messages = [
+        types.Content(role="user",parts=[types.Part(text=" ".join(user_prompt))]),
+    ]
+    response = client.models.generate_content(
+        model="gemini-2.0-flash-001", 
+        contents=messages)
+    
+    prompt_tokens = response.usage_metadata.prompt_token_count
+    response_tokens = response.usage_metadata.candidates_token_count
+    
+    if sys.argv[-1] == "--verbose":
+        print(f"User prompt: {' '.join(user_prompt)}\n")
 
-response = client.models.generate_content(
-    model="gemini-2.0-flash-001", 
-    contents=messages)
-prompt_tokens = response.usage_metadata.prompt_token_count
-response_tokens = response.usage_metadata.candidates_token_count
+    print(f"Response: {response.text}")
 
+    if sys.argv[-1] == "--verbose":
+        print(f"\nPrompt Tokens: {prompt_tokens}")
+        print(f"Response Tokens: {response_tokens}")
+else: 
+    print("Please provide input text as command line arguments.")
 
-print(response.text)
-print(f"Prompt Tokens: {prompt_tokens}")
-print(f"Response Tokens: {response_tokens}")
