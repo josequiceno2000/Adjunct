@@ -8,6 +8,8 @@ from functions.get_file_content import schema_get_file_content
 from functions.run_python_file import schema_run_python_file
 from functions.write_file import schema_write_file
 
+from functions.call_function import call_function, available_functions
+
 load_dotenv()
 api_key = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
@@ -52,21 +54,37 @@ if len(sys.argv) > 1:
     
     prompt_tokens = response.usage_metadata.prompt_token_count
     response_tokens = response.usage_metadata.candidates_token_count
-    
-    if sys.argv[-1] == "--verbose":
+
+    verbose = sys.argv[-1] == "--verbose"
+
+    if verbose: 
         print(f"User prompt: {' '.join(user_prompt)}\n")
 
-    print(f"Response: {response.text}")
+    if response.text is not None and response.text.strip() != "":
+        print(f"Response: {response.text}")
+    elif not response.function_calls:
+        print("Response: [No conversational response or function call was generated.]")
 
     if response.function_calls:
-        for function_call in response.function_calls:
-            print(f"\nFunction Call: {function_call.name}")
-            print(f"Arguments: {function_call.args}")
-    
+        function_call_results = []
 
-    if sys.argv[-1] == "--verbose":
+        for function_call in response.function_calls:
+            function_call_result = call_function(function_call, verbose=verbose)
+            
+            try:
+                result_data = function_call_result.parts[0].function_response.response
+            except(IndexError, AttributeError):
+                raise Exception("FATAL ERROR: call_function did not return a valid types.Content with a function_response.")
+            
+            if verbose:
+                print(f"--> {result_data}\n")
+            
+            function_call_results.append(function_call_result)
+
+    if verbose:
         print(f"\nPrompt Tokens: {prompt_tokens}")
         print(f"Response Tokens: {response_tokens}")
+    
 else: 
     print("Please provide input text as command line arguments.")
 
